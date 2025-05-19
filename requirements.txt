@@ -1,0 +1,25 @@
+# Flask - 웹 서버 프레임워크
+# pip install Flask==3.0.2
+Flask==3.0.2
+
+# Flask-Cors - Cross-Origin Resource Sharing (CORS) 지원
+# pip install Flask-Cors==4.0.0
+Flask-Cors==4.0.0
+
+# python-dotenv - 환경 변수 관리
+# pip install python-dotenv==1.0.1
+python-dotenv==1.0.1
+
+# PyTorch - 딥러닝 프레임워크 (WhisperX의 의존성)
+# pip install torch>=2.0.0
+torch>=2.0.0
+
+# WhisperX - 음성 인식 모델
+# pip install whisperx==3.1.1
+whisperx==3.1.1
+
+# ffmpeg-python - 오디오 파일 처리
+# pip install ffmpeg-python==0.2.0
+ffmpeg-python==0.2.0
+
+#.\venv\Scripts\activate 가상 환경 활성화화
