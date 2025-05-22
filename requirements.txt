@@ -7,8 +7,9 @@ Flask-Cors
 # python-dotenv - Environment Variables
 python-dotenv
 
-# PyTorch - Deep Learning Framework
-torch
+# PyTorch - Deep Learning Framework (CUDA 11.8 버전)
+--find-links https://download.pytorch.org/whl/torch_stable.html
+torch==1.10.0+cu113
 
 # WhisperX - Speech Recognition Model
 whisperx
