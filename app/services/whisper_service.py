@@ -1,25 +1,50 @@
 import whisperx
 import torch
-import re
-from typing import Dict, List, Optional
+from typing import Dict, List
+from whisperx.diarize import DiarizationPipeline
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 class WhisperService:
     def __init__(self):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        # large 모델로 변경
         self.model = whisperx.load_model("small", self.device, compute_type="float32")
+        # 화자 분리 모델 로드
+        hf_token = os.getenv('HF_TOKEN')
+        self.diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=self.device)
     
     def transcribe_audio(self, audio_path: str) -> Dict:
         """
-        오디오 파일을 텍스트로 변환합니다.
+        오디오 파일을 텍스트로 변환하고 화자 분리를 수행합니다.
         
         Args:
             audio_path (str): 오디오 파일 경로
             
         Returns:
-            Dict: 변환된 텍스트와 세그먼트 정보를 포함한 딕셔너리
+            Dict: 변환된 텍스트, 세그먼트 정보, 화자 정보를 포함한 딕셔너리
         """
         print("\n=== WhisperX 원본 결과 ===")
-        result = self.model.transcribe(audio_path)
+        # 1. 음성 인식 - 세그먼트 길이를 더 짧게 설정
+        result = self.model.transcribe(
+            audio_path,
+            batch_size=16,  # 배치 크기 증가
+        )
+        print(result)
+        print("========================\n")
+        
+        print("\n=== 화자 분리 결과 ===")
+        # 2. 화자 분리
+        diarize_segments = self.diarize_model(audio_path)
+        print(diarize_segments)
+        print("========================\n")
+        
+        # 3. 음성 인식 결과와 화자 분리 결과 결합
+        result = whisperx.assign_word_speakers(diarize_segments, result)
+        print("\n=== 최종 결합 결과 ===")
         print(result)
         print("========================\n")
         
