@@ -14,7 +14,7 @@ def create_app():
     app.config['HF_TOKEN'] = os.getenv('HF_TOKEN')
     
     # 라우트 등록
-    from app.routes import transcribe
-    app.register_blueprint(transcribe.bp)
+    from app.routes import api_router
+    app.register_blueprint(api_router.bp)
     
     return app 
