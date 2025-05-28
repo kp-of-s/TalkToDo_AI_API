@@ -1,3 +1,8 @@
+# Basic Dependencies
+numpy
+jinja2
+networkx
+
 # Flask - Web Framework
 Flask
 
@@ -18,6 +23,20 @@ ffmpeg-python
 
 # Speaker Diarization
 pyannote.audio
+
+# LangChain - LLM Framework
+langchain
+# langchain-openai  # Uncomment for GPT
+langchain-core
+langchain-community  # Required for Mistral
+
+# OpenAI - LLM Provider
+# openai  # Uncomment for GPT
+
+# Hugging Face - Required for Mistral
+huggingface-hub
+langchain-huggingface
+
 
 #.\venv\Scripts\activate
 # pip install -r requirements.txt

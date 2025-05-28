@@ -12,24 +12,18 @@ load_dotenv()
 class WhisperUtil:
     def __init__(self):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.model = whisperx.load_model("medium", self.device, compute_type="float32")
+        self.model = whisperx.load_model("base", self.device, compute_type="float32")
         hf_token = os.getenv('HF_TOKEN')
         self.diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=self.device)
     
     def speech_to_text(self, audio_path: str) -> Dict:
-        """WhisperX로 음성→텍스트만 수행"""
-        print("\n=== WhisperX 음성→텍스트 결과 ===")
+        """WhisperX로 음성→텍스트 수행"""
         result = self.model.transcribe(audio_path, batch_size=16)
-        print(result)
-        print("========================\n")
         return result
 
     def diarize(self, audio_path: str) -> List[Dict]:
-        """WhisperX로 화자 분리만 수행"""
-        print("\n=== WhisperX 화자 분리 결과 ===")
+        """WhisperX로 화자 분리 수행"""
         diarize_segments = self.diarize_model(audio_path)
-        print(diarize_segments)
-        print("========================\n")
         return diarize_segments
 
     def _process_segments(self, segments: List[Dict]) -> List[Dict]:

@@ -7,31 +7,11 @@ from app.utils.whisper_util import WhisperUtil
 # Load environment variables
 load_dotenv()
 
-class WhisperService:
+class APIService:
     def __init__(self):
         self.whisper_util = WhisperUtil()
 
-    def transcribe_audio(self, audio_path: str) -> Dict:
-        """
-        음성 파일을 텍스트로 변환하고 화자 분리를 수행합니다.
-        
-        Args:
-            audio_path (str): 오디오 파일 경로
-            
-        Returns:
-            Dict: {
-                "text": 전체 텍스트,
-                "segments": [
-                    {
-                        "text": 세그먼트 텍스트,
-                        "start": 시작 시간,
-                        "end": 종료 시간,
-                        "speaker": 화자 정보
-                    },
-                    ...
-                ]
-            }
-        """
+    def process_audio(self, audio_path: str) -> Dict:
         try:
             # 음성→텍스트 변환
             result = self.whisper_util.speech_to_text(audio_path)
@@ -60,5 +40,5 @@ class WhisperService:
                     "segments": []
                 }
         except Exception as e:
-            print(f"음성 변환 중 오류 발생: {str(e)}")
-            raise
+            print(f"음성 처리 중 오류 발생: {str(e)}")
+            raise 
