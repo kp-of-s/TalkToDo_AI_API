@@ -12,8 +12,8 @@ load_dotenv()
 class WhisperUtil:
     def __init__(self):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.model = whisperx.load_model("base", self.device, compute_type="float32")
         hf_token = os.getenv('HF_TOKEN')
+        self.model = whisperx.load_model("base", self.device, compute_type="float32")
         self.diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=self.device)
     
     def speech_to_text(self, audio_path: str) -> Dict:

@@ -5,11 +5,9 @@ networkx
 
 # Flask - Web Framework
 Flask
-
-# Flask-Cors - CORS Support
 Flask-Cors
 
-# python-dotenv - Environment Variables
+# Environment Variables
 python-dotenv
 
 # PyTorch - Deep Learning Framework
@@ -18,25 +16,20 @@ torch
 # WhisperX - Speech Recognition Model
 whisperx
 
-# ffmpeg-python - Audio Processing
+# Audio Processing
 ffmpeg-python
-
-# Speaker Diarization
 pyannote.audio
 
 # LangChain - LLM Framework
 langchain
-# langchain-openai  # Uncomment for GPT
 langchain-core
-langchain-community  # Required for Mistral
+langchain-openai
 
 # OpenAI - LLM Provider
-# openai  # Uncomment for GPT
+openai
 
-# Hugging Face - Required for Mistral
+# Hugging Face - Required for WhisperX
 huggingface-hub
-langchain-huggingface
-
 
 #.\venv\Scripts\activate
 # pip install -r requirements.txt
