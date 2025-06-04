@@ -31,5 +31,8 @@ openai
 # Hugging Face - Required for WhisperX
 huggingface-hub
 
+# Dateparser
+dateparser
+
 #.\venv\Scripts\activate
 # pip install -r requirements.txt

@@ -78,8 +78,9 @@ class LangChainUtil:
         [
             {{
                 "text": "일정 내용",
-                "start": 일정 시작 일자,
-                "end": 일정 종료 일자
+                "start": 일정 시작 일자 및 시간,
+                "end": 일정 종료 일자 및 시간,
+                "place": 장소
             }},
             ...
         ]
@@ -103,8 +104,8 @@ class LangChainUtil:
         [
             {{
                 "text": "할 일 내용",
-                "start": 할 일 시작 일자,
-                "end": 할 일 종료 일자
+                "start": 할 일 시작 일자 및 시간,
+                "end": 할 일 종료 일자 및 시간
             }}, 
             ...
         ]
