@@ -20,18 +20,20 @@ def process_meeting():
         return jsonify({"error": "audio 파일이 필요합니다."}), 400
     
     audio_file = request.files['audio']
+    meeting_date = request.form.get('meeting_date')
     temp_path, error_response, status_code = save_audio_file(audio_file, UPLOAD_FOLDER)
     if error_response:
         return error_response, status_code
     
     try:
-        result = api_service.process_audio(temp_path)
+        result = api_service.process_audio(temp_path, meeting_date)
         
         print("\n=== 처리 결과 ===")
         print(f"전체 텍스트: {result['meetingTranscript']}")
         print(f"요약: {result['meetingSummary']}")
         print(f"일정: {result['schedule']}")
         print(f"할 일: {result['todo']}")
+        print(result)
         
         return jsonify(result)
     except Exception as e:
