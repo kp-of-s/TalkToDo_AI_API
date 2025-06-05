@@ -2,7 +2,7 @@
 
 import os
 import json
-from typing import List, Dict
+from typing import List, Dict, Optional
 import boto3
 from dotenv import load_dotenv
 
@@ -10,6 +10,8 @@ load_dotenv()
 
 
 class BedrockUtil:
+    RELATIVE_DATE_TEMPLATE = "남은 기간 (가능한 경우 'YYYY-MM-DDTHH:mm:ss' 형식으로, 불가능한 경우 '3일 후', '1주일 후', '2개월 후' 등으로 표기)"
+    
     def __init__(self):
         self.runtime = boto3.client(
             "bedrock-runtime",
@@ -45,21 +47,23 @@ class BedrockUtil:
 
         result = json.loads(response["body"].read())
         return result["content"][0]["text"]
+    
 
     # ✅ 단일 텍스트 처리
     def summarize_meeting(self, text: str) -> Dict:
-        prompt = f"""<system>
-너는 회의 요약 전문가야. 다음 회의 내용을 요약해서 JSON 형식으로 정리해줘.
-</system>
-<user>
-{text}
+        prompt = f"""
+        <system>
+        너는 회의 요약 전문가야. 다음 회의 내용을 요약해서 반드시 예시로 든 JSON 형식으로 정리해줘.
+        </system>
+        <user>
+        {text}
 
-요약 형식:
-{{
-  "subject": "회의 주제",
-  "summary": "회의 내용 요약"
-}}
-</user>"""
+        {{
+        "subject": "회의 주제",
+        "summary": "회의 내용 요약"
+        }}
+        </user>
+        """
         try:
             result = self._call_claude(prompt)
             return json.loads(result)
@@ -67,22 +71,27 @@ class BedrockUtil:
             print("요약 실패:", e)
             return {"subject": "", "summary": "요약 실패"}
 
-    def extract_todos(self, text: str) -> List[Dict]:
-        prompt = f"""<system>
-너는 회의 분석 전문가야. 아래 회의에서 할 일을 JSON 배열로 추출해줘.
-</system>
-<user>
-{text}
+    def extract_todos(self, text: str, meeting_date: Optional[str] = None) -> List[Dict]:
+        prompt = f"""
+        <system>
+        너는 회의 분석 전문가야. 아래 회의에서 할 일을 반드시 예시로 든 JSON 배열로 추출해줘.
+        언제까지 특정 업무를 수행하겠다는 내용이 할 일이야.
+        현재 회의 날짜는 {meeting_date}이다.
+        단, start, end에 대한 내용이 없다면 없는 값에 null 입력
+        </system>
+        <user>
+        {text}
 
-[
-  {{
-    "text": "할 일 내용",
-    "start": "시작 날짜 또는 없음",
-    "end": "종료 날짜 또는 없음"
-  }},
-  ...
-]
-</user>"""
+        [
+        {{{{
+            "text": "할 일 내용",
+            "start": 할 일 시작까지 {self.RELATIVE_DATE_TEMPLATE},
+            "end": 할 일 종료까지 {self.RELATIVE_DATE_TEMPLATE}
+        }}}},
+        ...
+        ]
+        </user>
+        """
         try:
             result = self._call_claude(prompt)
             return json.loads(result)
@@ -90,22 +99,27 @@ class BedrockUtil:
             print("할 일 추출 실패:", e)
             return []
 
-    def extract_schedule(self, text: str) -> List[Dict]:
-        prompt = f"""<system>
-너는 일정 추출 전문가야. 회의에서 날짜나 일정을 JSON으로 정리해줘.
-</system>
-<user>
-{text}
+    def extract_schedule(self, text: str, meeting_date: Optional[str] = None) -> List[Dict]:
+        prompt = f"""
+        <system>
+        너는 일정 추출 전문가야. 회의에서 날짜나 일정을 반드시 예시로 든 JSON으로 정리해줘.
+        현재 회의 날짜는 {meeting_date}이다.
+        단, start, end, place에 대한 내용이 없다면 없는 값에 null 입력
+        </system>
+        <user>
+        {text}
 
-[
-  {{
-    "text": "일정 내용",
-    "start": "시작 날짜 또는 없음",
-    "end": "종료 날짜 또는 없음"
-  }},
-  ...
-]
-</user>"""
+        [
+            {{{{
+                "text": "일정 내용",
+                "start": 일정 시작까지 {self.RELATIVE_DATE_TEMPLATE},
+                "end": 일정 종료까지 {self.RELATIVE_DATE_TEMPLATE},
+                "place": 장소.
+            }}}},
+            ...
+        ]
+        </user>
+        """
         try:
             result = self._call_claude(prompt)
             return json.loads(result)
