@@ -4,7 +4,6 @@ from typing import Dict, List
 from whisperx.diarize import DiarizationPipeline
 import os
 from dotenv import load_dotenv
-import re
 
 # Load environment variables
 load_dotenv()
@@ -16,8 +15,15 @@ class WhisperUtil:
         self.model = whisperx.load_model("base", self.device, compute_type="float32")
         self.diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=self.device)
     
-    def speech_to_text(self, audio_path: str) -> Dict:
-        """WhisperX로 음성→텍스트 수행"""
+    def transcribe(self, audio_path: str) -> Dict:
+        """음성을 텍스트로 변환 (SST)
+        
+        Args:
+            audio_path: 오디오 파일 경로
+            
+        Returns:
+            변환 결과 (segments 포함)
+        """
         result = self.model.transcribe(audio_path, batch_size=16)
         return result
 
@@ -26,29 +32,15 @@ class WhisperUtil:
         diarize_segments = self.diarize_model(audio_path)
         return diarize_segments
 
-    def _process_segments(self, segments: List[Dict]) -> List[Dict]:
-        sentences_with_time = []
-        current_text = ""
-        start_time = None
-        end_time = None
-        for segment in segments:
-            if not current_text:
-                start_time = segment['start']
-            current_text += segment['text']
-            if re.search(r'[.!?]$', segment['text']):
-                end_time = segment['end']
-                sentences_with_time.append({
-                    "text": current_text.strip(),
-                    "start_time": round(start_time, 2),
-                    "end_time": round(end_time, 2)
-                })
-                current_text = ""
-                start_time = None
-                end_time = None
-        if current_text:
-            sentences_with_time.append({
-                "text": current_text.strip(),
-                "start_time": round(start_time, 2),
-                "end_time": round(segments[-1]['end'], 2)
-            })
-        return sentences_with_time
+    def integrate_segments(self, whisper_result: Dict, diarize_segments: List[Dict]) -> List[Dict]:
+        """Whisper 결과와 화자 분리 결과 통합
+        
+        Args:
+            whisper_result: Whisper 변환 결과
+            diarize_segments: 화자 분리 결과
+            
+        Returns:
+            통합된 세그먼트 목록
+        """
+        integrated_result = whisperx.assign_word_speakers(diarize_segments, whisper_result)
+        return integrated_result["segments"]
