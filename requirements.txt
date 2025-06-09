@@ -34,8 +34,11 @@ huggingface-hub
 # Dateparser
 dateparser
 
-#.\venv\Scripts\activate
-# pip install -r requirements.txt
+# Vector Database
+pinecone-client
 
 # project bedrock
 boto3
+
+#.\venv\Scripts\activate
+# pip install -r requirements.txt
