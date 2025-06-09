@@ -1,33 +1,46 @@
-import tempfile
 import os
-from flask import jsonify
+import tempfile
+from flask import request
+from typing import Tuple, Optional
 
-def save_audio_file(audio_file, upload_folder: str) -> tuple:
-    """오디오 파일을 저장하고 저장된 경로를 반환합니다."""
-    filename, file_extension, error_response, status_code = validate_audio_file(audio_file)
-    if error_response:
-        return None, error_response, status_code
+def save_audio_file(file) -> Tuple[Optional[str], Optional[str], Optional[int]]:
+    """업로드된 오디오 파일을 임시 파일로 저장
     
-    # 임시 파일 경로 생성
-    temp_filename = f'temp_{os.urandom(8).hex()}.{file_extension}'
-    temp_path = os.path.join(upload_folder, temp_filename)
-    
+    Args:
+        file: 업로드된 파일 객체
+        
+    Returns:
+        Tuple[임시 파일 경로, 에러 메시지, 상태 코드]
+    """
     try:
+        # 파일 확장자 검사
+        if not file.filename.lower().endswith(('.mp3', '.wav', '.m4a')):
+            return None, "지원하지 않는 파일 형식입니다. MP3, WAV, M4A 파일만 지원합니다.", 400
+            
+        # 임시 파일 생성
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1])
+        temp_path = temp_file.name
+        
         # 파일 저장
-        audio_file.save(temp_path)
-        print(f"\n=== 임시 파일 저장됨: {temp_path} ===")
+        file.save(temp_path)
+        temp_file.close()
+        
         return temp_path, None, None
+        
     except Exception as e:
-        return None, jsonify({"error": str(e)}), 500
+        return None, f"파일 저장 중 오류가 발생했습니다: {str(e)}", 500
 
 def cleanup_temp_file(file_path: str) -> None:
-    """임시 파일을 삭제합니다."""
-    if file_path and os.path.exists(file_path):
-        try:
-            os.remove(file_path)
-            print(f"\n=== 임시 파일 삭제됨: {file_path} ===")
-        except Exception as e:
-            print(f"\n=== 임시 파일 삭제 실패: {str(e)} ===")
+    """임시 파일 삭제
+    
+    Args:
+        file_path: 삭제할 파일 경로
+    """
+    try:
+        if os.path.exists(file_path):
+            os.unlink(file_path)
+    except Exception:
+        pass  # 파일 삭제 실패는 무시
 
 def validate_audio_file(audio_file) -> tuple:
     """오디오 파일을 검증하고 파일명과 확장자를 반환합니다."""

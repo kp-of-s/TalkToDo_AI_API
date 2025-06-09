@@ -12,13 +12,16 @@ def create_app():
     app = Flask(__name__)
     CORS(app)
     
-    # Hugging Face 토큰 설정
-    app.config['HF_TOKEN'] = os.getenv('HF_TOKEN')
+    # 환경 변수 설정
+    app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
-    # 라우트 등록
-    from app.routes import api_router, rag_router
-    app.register_blueprint(api_router.bp)
-    app.register_blueprint(rag_router.bp)
+    # 라우터 등록
+    from app.routes.api_router import bp
+    from app.routes.rag_router import bp as rag_bp
+    
+    app.register_blueprint(bp)
+    app.register_blueprint(rag_bp, url_prefix='/rag')
     
     return app 
 

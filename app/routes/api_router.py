@@ -2,9 +2,39 @@ from flask import Blueprint, request, jsonify
 import os
 from app.services.api_service import APIService
 from app.utils.audio_utils import save_audio_file, cleanup_temp_file
+from app.utils.whisper_util import WhisperUtil
+from app.services.rag_service import RAGService
+from app.utils.bedrock_util import BedrockUtil
+from app.utils.s3_util import S3Util
+from app.utils.embedding_util import EmbeddingUtil
+from app.utils.vector_db_util import VectorDBUtil
+from app.utils.langchain_util import LangChainUtil
 
-bp = Blueprint('api_router', __name__)
-api_service = APIService()
+# 유틸리티 인스턴스 초기화
+whisper_util = WhisperUtil()
+bedrock_util = BedrockUtil()
+s3_util = S3Util()
+embedding_util = EmbeddingUtil()
+vector_db_util = VectorDBUtil()
+langchain_util = LangChainUtil()
+
+# RAG 서비스 초기화
+rag_service = RAGService(
+    bedrock_util=bedrock_util,
+    s3_util=s3_util,
+    embedding_util=embedding_util,
+    vector_db_util=vector_db_util,
+    langchain_util=langchain_util
+)
+
+# API 서비스 초기화
+api_service = APIService(
+    whisper_util=whisper_util,
+    rag_service=rag_service
+)
+
+# Blueprint 생성
+bp = Blueprint('api', __name__)
 
 # 업로드 디렉토리 설정
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads')
@@ -16,29 +46,30 @@ def home():
 
 @bp.route('/process-meeting', methods=['POST'])
 def process_meeting():
-    if 'audio' not in request.files:
-        return jsonify({"error": "audio 파일이 필요합니다."}), 400
-    
-    audio_file = request.files['audio']
-    meeting_date = request.form.get('meeting_date')
-    temp_path, error_response, status_code = save_audio_file(audio_file, UPLOAD_FOLDER)
-    if error_response:
-        return error_response, status_code
-    
+    """회의 오디오 파일 처리 API"""
     try:
-        result = api_service.process_audio(temp_path, meeting_date)
+        # 파일 확인
+        if 'file' not in request.files:
+            return jsonify({"error": "파일이 없습니다."}), 400
+            
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "선택된 파일이 없습니다."}), 400
+            
+        # 사용자 ID 확인
+        user_id = request.form.get('user_id')
+        if not user_id:
+            return jsonify({"error": "사용자 ID가 필요합니다."}), 400
+            
+        # 오디오 처리
+        result = api_service.process_audio(
+            audio_file=file,
+            user_id=user_id
+        )
         
-        print("\n=== 처리 결과 ===")
-        print(f"전체 텍스트: {result['meetingTranscript']}")
-        print(f"요약: {result['meetingSummary']}")
-        print(f"일정: {result['schedule']}")
-        print(f"할 일: {result['todo']}")
-        print(result)
+        return jsonify(result), 200
         
-        return jsonify(result)
     except Exception as e:
-        print(f"\n=== 에러 발생 ===")
-        print(f"에러 내용: {str(e)}")
         return jsonify({"error": str(e)}), 500
     finally:
-        cleanup_temp_file(temp_path)
+        cleanup_temp_file(file)

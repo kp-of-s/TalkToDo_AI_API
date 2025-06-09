@@ -37,6 +37,102 @@ class LangChainUtil:
             formatted_text.append(f"{speaker}: {text}")
         return "\n".join(formatted_text)
 
+    def create_contextual_chunks(self, segments: List[Dict]) -> List[Dict]:
+        """회의 세그먼트를 문맥 기반으로 청크로 분리
+        
+        Args:
+            segments: 회의 세그먼트 목록
+            
+        Returns:
+            문맥 기반 청크 목록
+        """
+        try:
+            # 세그먼트를 텍스트로 변환
+            formatted_segments = []
+            for segment in segments:
+                speaker = segment.get("speaker", "Unknown")
+                text = segment["text"]
+                formatted_segments.append({
+                    "text": f"{speaker}: {text}",
+                    "start": segment.get("start", 0),
+                    "end": segment.get("end", 0),
+                    "speaker": speaker,
+                    "original_text": text
+                })
+            
+            # 문맥 분석을 위한 프롬프트 생성
+            template = """
+            너는 회의 대화의 문맥을 분석하는 전문가다.
+            다음 대화 내용을 문맥 단위로 나누어라.
+            
+            대화 내용:
+            {transcript}
+            
+            다음 기준으로 문맥을 나누어라:
+            1. 주제의 연속성
+            2. 논의 흐름의 자연스러움
+            3. 문맥의 일관성
+            4. 대화의 응집성
+            
+            반드시 아래와 같은 JSON 형식으로 응답:
+            [
+                {{
+                    "chunk_id": "청크 ID",
+                    "start_index": 시작 세그먼트 인덱스,
+                    "end_index": 종료 세그먼트 인덱스,
+                    "reason": "이 청크로 나눈 이유"
+                }},
+                ...
+            ]
+            """
+            
+            # 청크 분리 실행
+            chain = self.create_chain(template)
+            result = chain.invoke({
+                "transcript": "\n".join(seg["text"] for seg in formatted_segments)
+            })
+            
+            # 결과 파싱
+            chunk_info = json.loads(result)
+            
+            # 청크 생성
+            chunks = []
+            for chunk in chunk_info:
+                start_idx = chunk["start_index"]
+                end_idx = chunk["end_index"]
+                
+                chunk_segments = formatted_segments[start_idx:end_idx + 1]
+                chunks.append({
+                    "text": " ".join(seg["original_text"] for seg in chunk_segments),
+                    "speakers": list(set(seg["speaker"] for seg in chunk_segments)),
+                    "start_time": chunk_segments[0]["start"],
+                    "end_time": chunk_segments[-1]["end"],
+                    "segments": chunk_segments,
+                    "metadata": {
+                        "chunk_id": chunk["chunk_id"],
+                        "reason": chunk["reason"],
+                        "segment_count": len(chunk_segments)
+                    }
+                })
+            
+            return chunks
+            
+        except Exception as e:
+            print(f"청크 생성 실패: {str(e)}")
+            # 실패 시 원본 세그먼트를 하나의 청크로 반환
+            return [{
+                "text": " ".join(seg["text"] for seg in segments),
+                "speakers": list(set(seg.get("speaker", "Unknown") for seg in segments)),
+                "start_time": segments[0].get("start", 0),
+                "end_time": segments[-1].get("end", 0),
+                "segments": segments,
+                "metadata": {
+                    "chunk_id": "fallback_chunk",
+                    "reason": "청크 생성 실패로 인한 폴백",
+                    "segment_count": len(segments)
+                }
+            }]
+
     def summarize_meeting(self, transcript: Dict) -> Dict:
         try:
             formatted_transcript = self._format_transcript(transcript)

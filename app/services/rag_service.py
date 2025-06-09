@@ -7,6 +7,7 @@ from app.utils.bedrock_util import BedrockUtil
 from app.utils.s3_util import S3Util
 from app.utils.embedding_util import EmbeddingUtil
 from app.utils.vector_db_util import VectorDBUtil
+from app.utils.langchain_util import LangChainUtil
 
 load_dotenv()
 
@@ -15,11 +16,13 @@ class RAGService:
                  bedrock_util: BedrockUtil, 
                  s3_util: S3Util,
                  embedding_util: EmbeddingUtil,
-                 vector_db_util: VectorDBUtil):
+                 vector_db_util: VectorDBUtil,
+                 langchain_util: LangChainUtil):
         self.bedrock_util = bedrock_util
         self.s3_util = s3_util
         self.embedding_util = embedding_util
         self.vector_db_util = vector_db_util
+        self.langchain_util = langchain_util
         
     def process_meeting(self, 
                        segments: List[Dict], 
@@ -43,24 +46,33 @@ class RAGService:
                 meeting_date=meeting_date
             )
             
-            # 2. 텍스트 추출 및 처리
-            formatted_text = self._format_segments(segments)
+            # 2. 문맥 기반 청크 생성
+            chunks = self.langchain_util.create_contextual_chunks(segments)
             
             # 3. 요약/할일/일정 추출
+            formatted_text = self._format_segments(segments)
             summary = self.bedrock_util.summarize_meeting(formatted_text)
             todos = self.bedrock_util.extract_todos(formatted_text, meeting_date)
             schedules = self.bedrock_util.extract_schedule(formatted_text, meeting_date)
             
-            # 4. 임베딩 생성 및 벡터 DB 저장
-            segments_with_embeddings = self.embedding_util.process_segments(segments)
+            # 4. 청크별 임베딩 생성 및 벡터 DB 저장
+            chunks_with_embeddings = []
+            for chunk in chunks:
+                # 청크 텍스트에 대한 임베딩 생성
+                embedding = self.embedding_util.get_embeddings(chunk["text"])
+                if embedding:
+                    chunk["embedding"] = embedding
+                    chunks_with_embeddings.append(chunk)
+            
             meeting_title = self.s3_util._generate_meeting_title(user_id, meeting_date)
             
-            self.vector_db_util.store_vectors(
-                vectors=segments_with_embeddings,
-                user_id=user_id,
-                meeting_date=meeting_date,
-                meeting_title=meeting_title
-            )
+            if chunks_with_embeddings:
+                self.vector_db_util.store_vectors(
+                    vectors=chunks_with_embeddings,
+                    user_id=user_id,
+                    meeting_date=meeting_date,
+                    meeting_title=meeting_title
+                )
             
             return {
                 "path": path,

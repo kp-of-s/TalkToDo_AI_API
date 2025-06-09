@@ -1,7 +1,7 @@
 from typing import List, Dict, Optional
 import os
 from dotenv import load_dotenv
-import pinecone
+from pinecone import Pinecone
 from datetime import datetime
 
 load_dotenv()
@@ -10,21 +10,13 @@ class VectorDBUtil:
     def __init__(self):
         """Pinecone 벡터 DB 초기화"""
         api_key = os.getenv("PINECONE_API_KEY")
-        environment = os.getenv("PINECONE_ENVIRONMENT")
         index_name = os.getenv("PINECONE_INDEX_NAME")
         
-        # Pinecone 초기화
-        pinecone.init(api_key=api_key, environment=environment)
+        # Pinecone 클라이언트 초기화
+        self.pc = Pinecone(api_key=api_key)
         
-        # 인덱스가 없으면 생성
-        if index_name not in pinecone.list_indexes():
-            pinecone.create_index(
-                name=index_name,
-                dimension=1536,  # OpenAI text-embedding-ada-002의 차원
-                metric="cosine"
-            )
             
-        self.index = pinecone.Index(index_name)
+        self.index = self.pc.Index(index_name)
         
     def store_vectors(self, 
                      vectors: List[Dict],
@@ -125,9 +117,6 @@ class VectorDBUtil:
             삭제 성공 여부
         """
         try:
-            # 삭제할 벡터 ID 패턴
-            prefix = f"{user_id}_{meeting_date}_{meeting_title}"
-            
             # 벡터 삭제
             self.index.delete(filter={
                 "user_id": user_id,
