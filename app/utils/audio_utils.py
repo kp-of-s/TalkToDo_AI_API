@@ -14,8 +14,8 @@ def save_audio_file(file) -> Tuple[Optional[str], Optional[str], Optional[int]]:
     """
     try:
         # 파일 확장자 검사
-        if not file.filename.lower().endswith(('.mp3', '.wav', '.m4a')):
-            return None, "지원하지 않는 파일 형식입니다. MP3, WAV, M4A 파일만 지원합니다.", 400
+        if not file.filename.lower().endswith(('.mp3')):
+            return None, "지원하지 않는 파일 형식입니다. MP3 파일만 지원합니다.", 400
             
         # 임시 파일 생성
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1])

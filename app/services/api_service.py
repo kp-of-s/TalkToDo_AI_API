@@ -14,12 +14,14 @@ class APIService:
         
     def process_audio(self, 
                      audio_file,
-                     user_id: str) -> Dict:
+                     user_id: str,
+                     meeting_date: str) -> Dict:
         """오디오 파일 처리 및 저장
         
         Args:
             audio_file: 오디오 파일 객체
             user_id: 사용자 ID
+            meeting_date: 회의 날짜 (YYYY-MM-DD)
             
         Returns:
             처리 결과 (요약, 할일, 일정)
@@ -39,8 +41,11 @@ class APIService:
             # 3. 세그먼트 통합
             integrated_segments = self.whisper_util.integrate_segments(whisper_result, diarize_segments)
             
+            print("회의록 전문:", integrated_segments)
+            print("유저 ID:", user_id)
+            print("회의 날짜:", meeting_date)
+
             # 4. RAG 처리
-            meeting_date = datetime.now().strftime("%Y-%m-%d")
             result = self.rag_service.process_meeting(
                 segments=integrated_segments,
                 user_id=user_id,

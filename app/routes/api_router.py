@@ -61,10 +61,16 @@ def process_meeting():
         if not user_id:
             return jsonify({"error": "사용자 ID가 필요합니다."}), 400
             
+        # 회의 날짜 확인
+        meeting_date = request.form.get('date')
+        if not meeting_date:
+            return jsonify({"error": "회의 날짜가 필요합니다."}), 400
+            
         # 오디오 처리
         result = api_service.process_audio(
             audio_file=file,
-            user_id=user_id
+            user_id=user_id,
+            meeting_date=meeting_date
         )
         
         return jsonify(result), 200

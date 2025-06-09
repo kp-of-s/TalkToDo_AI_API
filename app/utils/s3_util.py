@@ -10,13 +10,14 @@ load_dotenv()
 
 class S3Util:
     def __init__(self):
-        self.s3_client = boto3.client(
-            's3',
-            aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-            aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
-            region_name=os.getenv('AWS_REGION')
+        self.s3 = boto3.client(
+            "s3",
+            region_name=os.getenv("AWS_REGION"),
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
         )
-        self.bucket_name = os.getenv('S3_BUCKET_NAME')
+        self.bucket = os.getenv("S3_BUCKET")
+        self.prefix = os.getenv("S3_PREFIX", "meetings/")
         
     def _generate_meeting_title(self, user_id: str, meeting_date: str) -> str:
         """회의 타이틀 생성
@@ -31,11 +32,8 @@ class S3Util:
         timestamp = datetime.now().strftime("%H%M%S")
         return f"{user_id}_{meeting_date}_{timestamp}"
         
-    def save_meeting_segments(self,
-                            segments: List[Dict],
-                            user_id: str,
-                            meeting_date: str) -> str:
-        """회의 세그먼트를 S3에 저장
+    def save_meeting_segments(self, segments: List[Dict], user_id: str, meeting_date: str) -> bool:
+        """회의 세그먼트를 S3에 텍스트 파일로 저장
         
         Args:
             segments: 회의 세그먼트 목록
@@ -43,32 +41,44 @@ class S3Util:
             meeting_date: 회의 날짜 (YYYY-MM-DD)
             
         Returns:
-            저장된 파일의 S3 경로
+            저장 성공 여부
         """
-        # 회의 타이틀 생성
-        meeting_title = self._generate_meeting_title(user_id, meeting_date)
-        
-        # S3 키 생성
-        s3_key = f"users/{user_id}/meetings/{meeting_date}/{meeting_title}.json"
-        
-        # 데이터 저장
         try:
-            self.s3_client.put_object(
-                Bucket=self.bucket_name,
-                Key=s3_key,
-                Body=json.dumps({
-                    "segments": segments,
-                    "user_id": user_id,
-                    "meeting_date": meeting_date,
-                    "meeting_title": meeting_title,
-                    "created_at": datetime.now().isoformat()
-                }, ensure_ascii=False),
-                ContentType='application/json'
+            # 파일 경로 생성
+            file_key = f"{self.prefix}{user_id}/{meeting_date}/meeting.txt"
+            
+            # 세그먼트를 텍스트 형식으로 변환
+            text_content = []
+            for segment in segments:
+                speaker = segment.get("speaker", "Unknown")
+                text = segment.get("text", "")
+                start_time = segment.get("start", "")
+                end_time = segment.get("end", "")
+                
+                # 시간 정보가 있는 경우에만 추가
+                time_info = f"[{start_time} - {end_time}]" if start_time and end_time else ""
+                
+                # 텍스트 라인 생성
+                text_line = f"{speaker} {time_info}: {text}"
+                text_content.append(text_line)
+            
+            # 전체 텍스트 생성
+            full_text = "\n".join(text_content)
+            
+            # S3에 업로드
+            self.s3.put_object(
+                Bucket=self.bucket,
+                Key=file_key,
+                Body=full_text.encode('utf-8'),
+                ContentType="text/plain"
             )
-            return s3_key
-        except ClientError as e:
-            print(f"Error saving to S3: {e}")
-            raise
+            
+            print(f"세그먼트 저장 완료: {file_key}")
+            return True
+            
+        except Exception as e:
+            print(f"S3 저장 실패: {str(e)}")
+            return False
             
     def get_meeting_segments(self,
                            user_id: str,
@@ -87,8 +97,8 @@ class S3Util:
         s3_key = f"users/{user_id}/meetings/{meeting_date}/{meeting_title}.json"
         
         try:
-            response = self.s3_client.get_object(
-                Bucket=self.bucket_name,
+            response = self.s3.get_object(
+                Bucket=self.bucket,
                 Key=s3_key
             )
             return json.loads(response['Body'].read().decode('utf-8'))
@@ -113,8 +123,8 @@ class S3Util:
         prefix = f"users/{user_id}/meetings/{year_month}/"
         
         try:
-            response = self.s3_client.list_objects_v2(
-                Bucket=self.bucket_name,
+            response = self.s3.list_objects_v2(
+                Bucket=self.bucket,
                 Prefix=prefix
             )
             
@@ -124,8 +134,8 @@ class S3Util:
                 meeting_title = os.path.splitext(os.path.basename(obj['Key']))[0]
                 
                 # 메타데이터 조회
-                metadata = self.s3_client.head_object(
-                    Bucket=self.bucket_name,
+                metadata = self.s3.head_object(
+                    Bucket=self.bucket,
                     Key=obj['Key']
                 )
                 
