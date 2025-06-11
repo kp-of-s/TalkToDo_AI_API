@@ -1,16 +1,14 @@
-from typing import Dict, List, Optional
-import os
-from datetime import datetime
+from typing import Dict
 from app.utils.whisper_util import WhisperUtil
-from app.services.rag_service import RAGService
+from app.utils.langchain_util import LangChainUtil
 from app.utils.audio_utils import save_audio_file, cleanup_temp_file
 
 class APIService:
     def __init__(self, 
                  whisper_util: WhisperUtil,
-                 rag_service: RAGService):
+                 langchain_util : LangChainUtil):
         self.whisper_util = whisper_util
-        self.rag_service = rag_service
+        self.langchain_util = langchain_util
         
     def process_audio(self, 
                      audio_file,
@@ -45,12 +43,20 @@ class APIService:
             print("유저 ID:", user_id)
             print("회의 날짜:", meeting_date)
 
-            # 4. RAG 처리
-            result = self.rag_service.process_meeting(
-                segments=integrated_segments,
-                user_id=user_id,
-                meeting_date=meeting_date
-            )
+            # 4. 추출
+
+            summarize = self.langchain_util.summarize_meeting(integrated_segments)
+
+            schedule = self.langchain_util.extract_schedule(integrated_segments, meeting_date)
+            todos, = self.langchain_util.extract_todos(integrated_segments, meeting_date)
+
+
+            result = {
+                "meetingTranscript": integrated_segments,
+                "meetingSummary": summarize,
+                "todos": todos,
+                "schedule": schedule
+            }
             
             return result
             

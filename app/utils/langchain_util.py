@@ -15,7 +15,7 @@ class LangChainUtil:
     
     def __init__(self):
         self.llm = ChatOpenAI(
-            model="gpt-3.5-turbo",
+            model="gpt-4o",
             temperature=0.7,
             openai_api_key=os.getenv('OPENAI_API_KEY')
         )
@@ -166,13 +166,9 @@ class LangChainUtil:
             print(f"스택 트레이스: {traceback.format_exc()}")
             raise
 
-    def extract_schedule(self, transcript: Dict, meeting_date: Optional[str] = None) -> List[Dict]:
+    def extract_schedule(self, transcript: Dict, meeting_date: str) -> List[Dict]:
         """회의에서 논의된 일정을 추출합니다."""
         formatted_transcript = self._format_transcript(transcript)
-        
-        # 회의 날짜가 없으면 현재 날짜 사용
-        if not meeting_date:
-            meeting_date = datetime.now().strftime("%Y년 %m월 %d일")
         
         template = f"""
         너는 일정을 추출하는 전문가다.
@@ -215,13 +211,9 @@ class LangChainUtil:
             print(f"에러 내용: {str(e)}")
             return []
 
-    def extract_todos(self, transcript: Dict, meeting_date: Optional[str] = None) -> List[Dict]:
+    def extract_todos(self, transcript: Dict, meeting_date: str) -> List[Dict]:
         """회의에서 논의된 할 일을 추출합니다."""
         formatted_transcript = self._format_transcript(transcript)
-
-        # 회의 날짜가 없으면 현재 날짜 사용
-        if not meeting_date:
-            meeting_date = datetime.now().strftime("%Y년 %m월 %d일")
 
         template = f"""
         너는 TODO 리스트를 추출하는 전문가다.

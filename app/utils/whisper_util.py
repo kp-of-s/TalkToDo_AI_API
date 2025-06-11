@@ -32,7 +32,7 @@ class WhisperUtil:
         diarize_segments = self.diarize_model(audio_path)
         return diarize_segments
 
-    def integrate_segments(self, whisper_result: Dict, diarize_segments: List[Dict]) -> List[Dict]:
+    def integrate_segments(self, whisper_result: Dict, diarize_segments: List[Dict]) -> Dict:
         """Whisper 결과와 화자 분리 결과 통합
         
         Args:
@@ -43,4 +43,6 @@ class WhisperUtil:
             통합된 세그먼트 목록
         """
         integrated_result = whisperx.assign_word_speakers(diarize_segments, whisper_result)
-        return integrated_result["segments"]
+        return {
+            "segments": integrated_result["segments"]
+        }
