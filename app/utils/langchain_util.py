@@ -5,7 +5,6 @@ from typing import Dict, List, Optional
 import json
 import os
 from dotenv import load_dotenv
-from datetime import datetime
 
 # .env 파일 로드
 load_dotenv()
@@ -21,6 +20,14 @@ class LangChainUtil:
         )
         self.output_parser = StrOutputParser()
 
+    def _remove_markdown_code_block(self, text: str) -> str:
+        #마크다운 코드 블록을 제거합니다.
+        text = text.strip()
+        text = text.split("\n", 1)[1]
+        if text.endswith("```"):
+            text = text.rsplit("\n", 1)[0]
+        return text.strip()
+
     def create_chain(self, template: str):
         prompt = ChatPromptTemplate.from_template(template)
         return prompt | self.llm | self.output_parser
@@ -32,10 +39,10 @@ class LangChainUtil:
         형식으로 변환."""
         formatted_text = []
         for segment in transcript["segments"]:
-            speaker = segment.get("speaker", "Unknown")
+            speaker = segment["speaker"]
             text = segment["text"]
             formatted_text.append(f"{speaker}: {text}")
-        return "\n".join(formatted_text)
+        return formatted_text
 
     def create_contextual_chunks(self, segments: List[Dict]) -> List[Dict]:
         """회의 세그먼트를 문맥 기반으로 청크로 분리
@@ -60,7 +67,6 @@ class LangChainUtil:
                     "original_text": text
                 })
             
-            # 문맥 분석을 위한 프롬프트 생성
             template = """
             너는 회의 대화의 문맥을 분석하는 전문가다.
             다음 대화 내용을 문맥 단위로 나누어라.
@@ -75,7 +81,7 @@ class LangChainUtil:
             4. 대화의 응집성
             
             반드시 아래와 같은 JSON 형식으로 응답:
-            [
+            {{[
                 {{
                     "chunk_id": "청크 ID",
                     "start_index": 시작 세그먼트 인덱스,
@@ -83,19 +89,16 @@ class LangChainUtil:
                     "reason": "이 청크로 나눈 이유"
                 }},
                 ...
-            ]
+            ]}}
             """
             
-            # 청크 분리 실행
             chain = self.create_chain(template)
             result = chain.invoke({
                 "transcript": "\n".join(seg["text"] for seg in formatted_segments)
             })
             
-            # 결과 파싱
             chunk_info = json.loads(result)
             
-            # 청크 생성
             chunks = []
             for chunk in chunk_info:
                 start_idx = chunk["start_index"]
@@ -119,7 +122,6 @@ class LangChainUtil:
             
         except Exception as e:
             print(f"청크 생성 실패: {str(e)}")
-            # 실패 시 원본 세그먼트를 하나의 청크로 반환
             return [{
                 "text": " ".join(seg["text"] for seg in segments),
                 "speakers": list(set(seg.get("speaker", "Unknown") for seg in segments)),
@@ -139,9 +141,9 @@ class LangChainUtil:
             
             template = """
             너는 회의록 요약 전문가다.
-            다음 회의록을 읽고, JSON 형식으로 요약하라.
+            다음 회의록을 읽고, JSON으로 요약하라.
 
-            반드시 아래와 같은 JSON 형식으로 응답:
+            반드시 아래와 같은 JSON으로 응답:
             {{
                 "subject": "회의 주제",
                 "summary": "회의 내용 요약"
@@ -151,106 +153,131 @@ class LangChainUtil:
             {transcript}
             각 발언은 "화자: 내용" 형식임.
             """
+            
             chain = self.create_chain(template)
             
             result = chain.invoke({"transcript": formatted_transcript})
-            
+
+            if result.strip().startswith("```"):
+                result = self._remove_markdown_code_block(result)
             parsed_result = json.loads(result)
-            
+
+            print("\n=== 요약 ===")
+            print(parsed_result)
+
             return parsed_result
+       
+                
         except Exception as e:
             print(f"\n=== 에러 발생 ===")
             print(f"에러 타입: {type(e)}")
             print(f"에러 내용: {str(e)}")
             import traceback
             print(f"스택 트레이스: {traceback.format_exc()}")
-            raise
+            return {
+                "subject": "회의 요약 실패",
+                "summary": "회의 내용을 요약하는데 실패했습니다."
+            }
 
     def extract_schedule(self, transcript: Dict, meeting_date: str) -> List[Dict]:
         """회의에서 논의된 일정을 추출합니다."""
-        formatted_transcript = self._format_transcript(transcript)
-        
-        template = f"""
-        너는 일정을 추출하는 전문가다.
-        다음 회의 내용에서 일정을 추출하라.
-        현재 회의 날짜는 {{meeting_date}}이다.
-
-        반드시 아래와 같은 JSON 형식으로 응답:
-        [
-            {{{{
-                "text": "일정 내용",
-                "start": 일정 시작까지 {self.RELATIVE_DATE_TEMPLATE},
-                "end": 일정 종료까지 {self.RELATIVE_DATE_TEMPLATE},
-                "place": 장소.
-            }}}},
-            ...
-        ]
-        단, start, end, place에 대한 내용이 없다면 없는 값에 null 입력
-
-        네가 일정을 추출할 회의록:
-        {{transcript}}
-        각 발언은 "화자: 내용" 형식임.
-        """
-        chain = self.create_chain(template)
-        result = chain.invoke({
-            "transcript": formatted_transcript,
-            "meeting_date": meeting_date
-        })
-        
-        print("\n=== GPT 응답 ===")
-        print(result)
-        print("===============")
-        
         try:
-            return json.loads(result)
-        except json.JSONDecodeError as e:
-            print(f"\n=== JSON 파싱 에러 ===")
-            print(f"에러 위치: {e.pos}")
-            print(f"에러 라인: {e.lineno}")
-            print(f"에러 컬럼: {e.colno}")
+            formatted_transcript = self._format_transcript(transcript)
+            
+            template = """
+            너는 일정을 추출하는 전문가다.
+            다음 회의 내용에서 일정을 추출하라.
+            현재 회의 날짜는 {meeting_date}이다.
+
+            반드시 아래와 같은 JSON 형식으로 응답:
+            {{[
+                {{
+                    "text": "일정 내용",
+                    "start": 일정 시작까지 {relative_date_template},
+                    "end": 일정 종료까지 {relative_date_template},
+                    "place": 장소
+                }},
+                ...
+            ]}}
+            단, start, end, place에 대한 내용이 없다면 없는 값에 null 입력
+
+            네가 일정을 추출할 회의록:
+            {transcript}
+            각 발언은 "화자: 내용" 형식임.
+            """
+            
+            chain = self.create_chain(template)
+            result = chain.invoke({
+                "transcript": formatted_transcript,
+                "meeting_date": meeting_date,
+                "relative_date_template": self.RELATIVE_DATE_TEMPLATE
+            })
+
+            print("\n=== 일정 응답 ===")
+            print(result)
+            
+            if result.strip().startswith("```"):
+                result = self._remove_markdown_code_block(result)
+            parsed_result = json.loads(result)
+
+            print("\n=== 일정 ===")
+            print(parsed_result)
+            
+            return parsed_result
+                
+        except Exception as e:
+            print(f"\n=== 에러 발생 ===")
+            print(f"에러 타입: {type(e)}")
             print(f"에러 내용: {str(e)}")
+            import traceback
+            print(f"스택 트레이스: {traceback.format_exc()}")
             return []
 
     def extract_todos(self, transcript: Dict, meeting_date: str) -> List[Dict]:
         """회의에서 논의된 할 일을 추출합니다."""
-        formatted_transcript = self._format_transcript(transcript)
-
-        template = f"""
-        너는 TODO 리스트를 추출하는 전문가다.
-        다음 회의 내용에서 할 일(TODO)을 추출하라.
-        현재 회의 날짜는 {{meeting_date}}이다.
-
-        반드시 아래와 같은 JSON 형식으로 응답:
-        [
-            {{{{
-                "text": "할 일 내용",
-                "start": 할 일 시작까지 {self.RELATIVE_DATE_TEMPLATE},
-                "end": 할 일 종료까지 {self.RELATIVE_DATE_TEMPLATE}
-            }}}}, 
-            ...
-        ]
-        단, start, end에 대한 내용이 없다면 없는 값에 null 입력
-
-        네가 TODO를 추출할 회의록:
-        {{transcript}}
-        각 발언은 "화자: 내용" 형식임.
-        """
-        chain = self.create_chain(template)
-        result = chain.invoke({
-            "transcript": formatted_transcript,
-            "meeting_date": meeting_date
-        })
-        
-        print("\n=== GPT 응답 ===")
-        print(result)
-        print("===============")
-        
         try:
-            return json.loads(result)
-        except json.JSONDecodeError as e:
-            print(f"\n=== JSON 파싱 에러 ===")
-            print(f"에러 위치: {e.pos}")
-            print(f"에러 라인: {e.lineno}")
-            print(f"에러 컬럼: {e.colno}")
+            formatted_transcript = self._format_transcript(transcript)
+
+            template = """
+            너는 TODO 리스트를 추출하는 전문가다.
+            다음 회의 내용에서 할 일(TODO)을 추출하라.
+            현재 회의 날짜는 {meeting_date}이다.
+
+            반드시 아래와 같은 JSON 형식으로 응답:
+            {{[
+                {{
+                    "text": "할 일 내용",
+                    "start": 할 일 시작까지 {relative_date_template},
+                    "end": 할 일 종료까지 {relative_date_template}
+                }}, 
+                ...
+            ]}}
+            단, start, end에 대한 내용이 없다면 없는 값에 null 입력
+
+            네가 TODO를 추출할 회의록:
+            {transcript}
+            각 발언은 "화자: 내용" 형식임.
+            """
+            chain = self.create_chain(template)
+            result = chain.invoke({
+                "transcript": formatted_transcript,
+                "meeting_date": meeting_date,
+                "relative_date_template": self.RELATIVE_DATE_TEMPLATE
+            })
+            
+            if result.strip().startswith("```"):
+                result = self._remove_markdown_code_block(result)
+            parsed_result = json.loads(result)
+
+            print("\n=== 투두 ===")
+            print(parsed_result)
+            
+            return parsed_result
+                
+        except Exception as e:
+            print(f"\n=== 에러 발생 ===")
+            print(f"에러 타입: {type(e)}")
             print(f"에러 내용: {str(e)}")
+            import traceback
+            print(f"스택 트레이스: {traceback.format_exc()}")
             return [] 
