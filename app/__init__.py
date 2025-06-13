@@ -19,9 +19,11 @@ def create_app():
     # 라우터 등록
     from app.routes.api_router import bp
     from app.routes.rag_router import bp as rag_bp
+    from app.routes.agent_router import agent_bp
     
     app.register_blueprint(bp)
     app.register_blueprint(rag_bp, url_prefix='/rag')
+    app.register_blueprint(agent_bp) 
     
     return app 
 

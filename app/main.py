@@ -7,6 +7,7 @@ from app.utils.bedrock_util import BedrockUtil
 from app.utils.s3_util import S3Util
 from app.routes.api_router import bp as api_bp
 from app.routes.rag_router import bp as rag_bp
+from app.routes.agent_router import bp as agent_bp
 
 app = Flask(__name__)
 
@@ -26,6 +27,7 @@ api_service = APIService(
 # 라우터 등록
 app.register_blueprint(api_bp)
 app.register_blueprint(rag_bp)
+app.register_blueprint(agent_bp)
 
 if __name__ == "__main__":
     app.run(debug=True) 
