@@ -5,6 +5,9 @@ from typing import Dict, List, Optional
 import json
 import os
 from dotenv import load_dotenv
+from app.templates.schedule import SCHEDULE_TEMPLATE
+from app.templates.todo import TODO_TEMPLATE
+from app.templates.meeting import SUMMARIZE_MEETING_TEMPLATE
 
 # .env 파일 로드
 load_dotenv()
@@ -139,22 +142,7 @@ class LangChainUtil:
         try:
             formatted_transcript = self._format_transcript(transcript)
             
-            template = """
-            너는 회의록 요약 전문가다.
-            다음 회의록을 읽고, JSON으로 요약하라.
-
-            반드시 아래와 같은 JSON으로 응답:
-            {{
-                "subject": "회의 주제",
-                "summary": "회의 내용 요약"
-            }}
-
-            네가 요약할 회의록:
-            {transcript}
-            각 발언은 "화자: 내용" 형식임.
-            """
-            
-            chain = self.create_chain(template)
+            chain = self.create_chain(SUMMARIZE_MEETING_TEMPLATE)
             
             result = chain.invoke({"transcript": formatted_transcript})
 
@@ -184,29 +172,7 @@ class LangChainUtil:
         try:
             formatted_transcript = self._format_transcript(transcript)
             
-            template = """
-            너는 일정을 추출하는 전문가다.
-            다음 회의 내용에서 일정을 추출하라.
-            현재 회의 날짜는 {meeting_date}이다.
-
-            반드시 아래와 같은 JSON 형식으로 응답:
-            {{[
-                {{
-                    "text": "일정 내용",
-                    "start": 일정 시작까지 {relative_date_template},
-                    "end": 일정 종료까지 {relative_date_template},
-                    "place": 장소
-                }},
-                ...
-            ]}}
-            단, start, end, place에 대한 내용이 없다면 없는 값에 null 입력
-
-            네가 일정을 추출할 회의록:
-            {transcript}
-            각 발언은 "화자: 내용" 형식임.
-            """
-            
-            chain = self.create_chain(template)
+            chain = self.create_chain(SCHEDULE_TEMPLATE)
             result = chain.invoke({
                 "transcript": formatted_transcript,
                 "meeting_date": meeting_date,
@@ -238,27 +204,7 @@ class LangChainUtil:
         try:
             formatted_transcript = self._format_transcript(transcript)
 
-            template = """
-            너는 TODO 리스트를 추출하는 전문가다.
-            다음 회의 내용에서 할 일(TODO)을 추출하라.
-            현재 회의 날짜는 {meeting_date}이다.
-
-            반드시 아래와 같은 JSON 형식으로 응답:
-            {{[
-                {{
-                    "text": "할 일 내용",
-                    "start": 할 일 시작까지 {relative_date_template},
-                    "end": 할 일 종료까지 {relative_date_template}
-                }}, 
-                ...
-            ]}}
-            단, start, end에 대한 내용이 없다면 없는 값에 null 입력
-
-            네가 TODO를 추출할 회의록:
-            {transcript}
-            각 발언은 "화자: 내용" 형식임.
-            """
-            chain = self.create_chain(template)
+            chain = self.create_chain(TODO_TEMPLATE)
             result = chain.invoke({
                 "transcript": formatted_transcript,
                 "meeting_date": meeting_date,

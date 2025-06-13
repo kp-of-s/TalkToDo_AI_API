@@ -33,7 +33,7 @@ class S3Util:
         return f"{user_id}_{meeting_date}_{timestamp}"
         
     def save_meeting_segments(self, segments: List[Dict], user_id: str, meeting_date: str) -> bool:
-        """회의 세그먼트를 S3에 텍스트 파일로 저장
+        """회의 세그먼트를 S3에 JSON 파일로 저장
         
         Args:
             segments: 회의 세그먼트 목록
@@ -45,32 +45,24 @@ class S3Util:
         """
         try:
             # 파일 경로 생성
-            file_key = f"{self.prefix}{user_id}/{meeting_date}/meeting.txt"
+            file_key = f"{self.prefix}{user_id}/{meeting_date}/meeting.json"
             
-            # 세그먼트를 텍스트 형식으로 변환
-            text_content = []
-            for segment in segments:
-                speaker = segment.get("speaker", "Unknown")
-                text = segment.get("text", "")
-                start_time = segment.get("start", "")
-                end_time = segment.get("end", "")
-                
-                # 시간 정보가 있는 경우에만 추가
-                time_info = f"[{start_time} - {end_time}]" if start_time and end_time else ""
-                
-                # 텍스트 라인 생성
-                text_line = f"{speaker} {time_info}: {text}"
-                text_content.append(text_line)
-            
-            # 전체 텍스트 생성
-            full_text = "\n".join(text_content)
+            # JSON 형식으로 변환
+            json_content = {
+                "metadata": {
+                    "user_id": user_id,
+                    "meeting_date": meeting_date,
+                    "created_at": datetime.now().isoformat()
+                },
+                "segments": segments
+            }
             
             # S3에 업로드
             self.s3.put_object(
                 Bucket=self.bucket,
                 Key=file_key,
-                Body=full_text.encode('utf-8'),
-                ContentType="text/plain"
+                Body=json.dumps(json_content, ensure_ascii=False, indent=2).encode('utf-8'),
+                ContentType="application/json"
             )
             
             print(f"세그먼트 저장 완료: {file_key}")

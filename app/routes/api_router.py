@@ -30,7 +30,8 @@ rag_service = RAGService(
 # API 서비스 초기화
 api_service = APIService(
     whisper_util=whisper_util,
-    langchain_util=langchain_util
+    langchain_util=langchain_util,
+    s3_util=s3_util
 )
 
 # Blueprint 생성
