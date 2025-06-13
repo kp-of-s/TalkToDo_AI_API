@@ -4,6 +4,7 @@ from typing import Dict, List
 from whisperx.diarize import DiarizationPipeline
 import os
 from dotenv import load_dotenv
+"# from faster_whisper.transcribe import TranscriptionOptions"
 
 # Load environment variables
 load_dotenv()
@@ -16,15 +17,24 @@ class WhisperUtil:
         self.diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=self.device)
     
     def transcribe(self, audio_path: str) -> Dict:
-        """음성을 텍스트로 변환 (SST)
-        
-        Args:
-            audio_path: 오디오 파일 경로
-            
-        Returns:
-            변환 결과 (segments 포함)
         """
-        result = self.model.transcribe(audio_path, batch_size=16)
+        # transcription_options = TranscriptionOptions(
+        #     word_timestamps=True,
+        #     no_speech_threshold=0.3,
+        #     condition_on_previous_text=False,
+        #     suppress_blank=True,
+        #     max_new_tokens=50,
+        #     clip_timestamps=30,
+        #     hallucination_silence_threshold=0.5
+        # )
+        """
+
+        result = self.model.transcribe(
+            audio_path,
+            batch_size=16
+            # language='ko',
+            # transcription_options=transcription_options,
+        )
         return result
 
     def diarize(self, audio_path: str) -> List[Dict]:

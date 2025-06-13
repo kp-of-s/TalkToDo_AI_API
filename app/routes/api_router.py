@@ -51,21 +51,21 @@ def process_meeting():
     try:
         # 파일 확인
         if 'audio' not in request.files:
-            return jsonify({"error": "파일이 없습니다."}), 400
+            return jsonify(error="파일이 없습니다."), 400
             
         audio = request.files['audio']
         if audio.filename == '':
-            return jsonify({"error": "선택된 파일이 없습니다."}), 400
+            return jsonify(error="선택된 파일이 없습니다."), 400
             
         # 사용자 ID 확인
         user_id = request.form.get('user_id')
         if not user_id:
-            return jsonify({"error": "사용자 ID가 필요합니다."}), 400
+            return jsonify(error="사용자 ID가 필요합니다."), 400
             
         # 회의 날짜 확인
         meeting_date = request.form.get('meeting_date')
         if not meeting_date:
-            return jsonify({"error": "회의 날짜가 필요합니다."}), 400
+            return jsonify(error="회의 날짜가 필요합니다."), 400
 
         # 오디오 처리
         result = api_service.process_audio(
@@ -74,9 +74,9 @@ def process_meeting():
             meeting_date=meeting_date
         )
         
-        return jsonify(result), 200
+        return jsonify(**result), 200
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify(error=str(e)), 500
     finally:
         cleanup_temp_file(audio)

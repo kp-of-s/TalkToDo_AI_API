@@ -54,11 +54,11 @@ class APIService:
             todos = self.langchain_util.extract_todos(integrated_segments, meeting_date)
 
             # 6. 날짜 처리
-            processed_schedule = self.date_util.process_schedule_dates(schedule)
-            processed_todos = self.date_util.process_todo_dates(todos)
+            processed_schedule = self.date_util.process_schedule_dates(schedule["items"])
+            processed_todos = self.date_util.process_todo_dates(todos["items"])
 
             result = {
-                "meetingTranscript": integrated_segments,
+                "meetingTranscript": integrated_segments["segments"],
                 "meetingSummary": summarize,
                 "todos": processed_todos,
                 "schedule": processed_schedule

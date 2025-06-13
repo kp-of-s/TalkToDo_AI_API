@@ -33,7 +33,7 @@ class S3Util:
         return f"{user_id}_{meeting_date}_{timestamp}"
         
     def save_meeting_segments(self, segments: List[Dict], user_id: str, meeting_date: str) -> bool:
-        """회의 세그먼트를 S3에 JSON 파일로 저장
+        """회의 세그먼트를 S3에 텍스트 파일로 저장
         
         Args:
             segments: 회의 세그먼트 목록
@@ -45,24 +45,29 @@ class S3Util:
         """
         try:
             # 파일 경로 생성
-            file_key = f"{self.prefix}{user_id}/{meeting_date}/meeting.json"
+            file_key = f"{self.prefix}{user_id}/{meeting_date}/meeting.txt"
             
-            # JSON 형식으로 변환
-            json_content = {
-                "metadata": {
-                    "user_id": user_id,
-                    "meeting_date": meeting_date,
-                    "created_at": datetime.now().isoformat()
-                },
-                "segments": segments
-            }
+            # 텍스트 형식으로 변환
+            text_content = []
+            text_content.append(f"=== 회의 정보 ===")
+            text_content.append(f"사용자: {user_id}")
+            text_content.append(f"날짜: {meeting_date}")
+            text_content.append(f"생성: {datetime.now().isoformat()}")
+            text_content.append("")
+            text_content.append("=== 회의 내용 ===")
+            
+            for segment in segments:
+                speaker = segment.get('speaker', 'Unknown')
+                text = segment.get('text', '').strip()
+                if text:
+                    text_content.append(f"{speaker}: {text}")
             
             # S3에 업로드
             self.s3.put_object(
                 Bucket=self.bucket,
                 Key=file_key,
-                Body=json.dumps(json_content, ensure_ascii=False, indent=2).encode('utf-8'),
-                ContentType="application/json"
+                Body='\n'.join(text_content).encode('utf-8'),
+                ContentType="text/plain"
             )
             
             print(f"세그먼트 저장 완료: {file_key}")
