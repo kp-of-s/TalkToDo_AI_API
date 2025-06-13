@@ -45,6 +45,9 @@ class APIService:
             # 3. 세그먼트 통합
             integrated_segments = self.whisper_util.integrate_segments(whisper_result, diarize_segments)
             
+            # words 필드 제거
+            integrated_segments["segments"] = self.whisper_util.remove_words_from_segments(integrated_segments["segments"])
+            
             # 4. 통합된 세그먼트를 S3에 저장
             self.s3_util.save_meeting_segments(integrated_segments["segments"], user_id, meeting_date)
 
@@ -64,7 +67,7 @@ class APIService:
                 "schedule": processed_schedule
             }
 
-            print("resultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresult:", result)
+            print("resultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresultresult:", result)
             
             return result
             
