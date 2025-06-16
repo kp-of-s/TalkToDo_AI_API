@@ -4,7 +4,6 @@ from typing import Dict, List
 from whisperx.diarize import DiarizationPipeline
 import os
 from dotenv import load_dotenv
-"# from faster_whisper.transcribe import TranscriptionOptions"
 
 # Load environment variables
 load_dotenv()
@@ -17,24 +16,16 @@ class WhisperUtil:
         self.diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=self.device)
     
     def transcribe(self, audio_path: str) -> Dict:
-        """
-        # transcription_options = TranscriptionOptions(
-        #     word_timestamps=True,
-        #     no_speech_threshold=0.3,
-        #     condition_on_previous_text=False,
-        #     suppress_blank=True,
-        #     max_new_tokens=50,
-        #     clip_timestamps=30,
-        #     hallucination_silence_threshold=0.5
-        # )
-        """
-
+        
         result = self.model.transcribe(
             audio_path,
-            batch_size=16
-            # language='ko',
-            # transcription_options=transcription_options,
+            batch_size=16,
+            language='ko',
         )
+
+        align_model, metadata = whisperx.load_align_model(language_code="ko", device=self.device)
+        result = whisperx.align(result["segments"], align_model, metadata, audio_path, self.device)
+
         return result
 
     def diarize(self, audio_path: str) -> List[Dict]:
@@ -56,3 +47,23 @@ class WhisperUtil:
         return {
             "segments": integrated_result["segments"]
         }
+
+    def remove_words_from_segments(self, segments: List[Dict]) -> List[Dict]:
+        """세그먼트에서 words 필드 제거
+        
+        Args:
+            segments: 세그먼트 목록
+            
+        Returns:
+            words 필드가 제거된 세그먼트 목록
+        """
+        cleaned_segments = []
+        for segment in segments:
+            cleaned_segment = {
+                'start': segment['start'],
+                'end': segment['end'],
+                'text': segment['text'],
+                'speaker': segment['speaker']
+            }
+            cleaned_segments.append(cleaned_segment)
+        return cleaned_segments

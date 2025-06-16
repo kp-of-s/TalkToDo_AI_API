@@ -9,7 +9,7 @@ TODO_TEMPLATE = """
 
 반드시 아래와 같은 JSON 형식으로 응답:
 {{
-    [
+    "items": [
         {{
             "text": "할 일 내용",
             "start": 할 일 시작까지 {relative_date_template},
