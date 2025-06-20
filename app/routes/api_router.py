@@ -49,6 +49,7 @@ def home():
 def process_meeting():
     """회의 오디오 파일 처리 API"""
     try:
+        print("process_meeting 호출")
         # 파일 확인
         if 'audio' not in request.files:
             return jsonify(error="파일이 없습니다."), 400

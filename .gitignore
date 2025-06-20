@@ -175,6 +175,7 @@ cython_debug/
 
 # Virtual Environment
 venv/
+venv-test/
 ENV/
 env/
 

@@ -150,9 +150,6 @@ class LangChainUtil:
                 result = self._remove_markdown_code_block(result)
             parsed_result = json.loads(result)
 
-            print("\n=== 요약 ===")
-            print(parsed_result)
-
             return parsed_result
        
                 
@@ -178,16 +175,10 @@ class LangChainUtil:
                 "meeting_date": meeting_date,
                 "relative_date_template": self.RELATIVE_DATE_TEMPLATE
             })
-
-            print("\n=== 일정 응답 ===")
-            print(result)
             
             if result.strip().startswith("```"):
                 result = self._remove_markdown_code_block(result)
             parsed_result = json.loads(result)
-
-            print("\n=== 일정 ===")
-            print(parsed_result)
             
             return parsed_result
                 
@@ -214,9 +205,6 @@ class LangChainUtil:
             if result.strip().startswith("```"):
                 result = self._remove_markdown_code_block(result)
             parsed_result = json.loads(result)
-
-            print("\n=== 투두 ===")
-            print(parsed_result)
             
             return parsed_result
                 

@@ -11,18 +11,25 @@ load_dotenv()
 class WhisperUtil:
     def __init__(self):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        print(f"CUDA 사용 가능 여부: {torch.cuda.is_available()}")
+        print(f"선택된 device: {self.device}")
+        
         hf_token = os.getenv('HF_TOKEN')
-        self.model = whisperx.load_model("base", self.device, compute_type="float32")
-        self.diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=self.device)
+        try:
+            self.model = whisperx.load_model("base", self.device, compute_type="float32")
+            self.diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=self.device)
+        except Exception as e:
+            print(f"GPU 모델 로딩 실패, CPU로 전환: {e}")
+            self.device = 'cpu'
+            self.model = whisperx.load_model("base", self.device, compute_type="float32")
+            self.diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=self.device)
     
     def transcribe(self, audio_path: str) -> Dict:
-        
         result = self.model.transcribe(
             audio_path,
             batch_size=16,
             language='ko',
         )
-
         align_model, metadata = whisperx.load_align_model(language_code="ko", device=self.device)
         result = whisperx.align(result["segments"], align_model, metadata, audio_path, self.device)
 
@@ -43,6 +50,7 @@ class WhisperUtil:
         Returns:
             통합된 세그먼트 목록
         """
+        print("integrate_segments 호출")
         integrated_result = whisperx.assign_word_speakers(diarize_segments, whisper_result)
         return {
             "segments": integrated_result["segments"]
