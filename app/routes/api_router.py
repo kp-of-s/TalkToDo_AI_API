@@ -1,7 +1,6 @@
 from flask import Blueprint, request, jsonify
 import os
 from app.services.api_service import APIService
-from app.utils.audio_utils import save_audio_file, cleanup_temp_file
 from app.utils.whisper_util import WhisperUtil
 from app.services.rag_service import RAGService
 from app.utils.bedrock_util import BedrockUtil
@@ -79,5 +78,3 @@ def process_meeting():
         
     except Exception as e:
         return jsonify(error=str(e)), 500
-    finally:
-        cleanup_temp_file(audio)
